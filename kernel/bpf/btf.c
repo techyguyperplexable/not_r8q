@@ -156,7 +156,8 @@
  *                        +-----------------------------------------+
  *
  */
-
+ 
+#define BITS_PER_U64 (sizeof(u64) * BITS_PER_BYTE)
 #define BITS_PER_U128 (sizeof(u64) * BITS_PER_BYTE * 2)
 #define BITS_PER_BYTE_MASK (BITS_PER_BYTE - 1)
 #define BITS_PER_BYTE_MASKED(bits) ((bits) & BITS_PER_BYTE_MASK)
@@ -1384,24 +1385,28 @@ static void btf_bitfield_seq_show(void *data, u8 bits_offset,
 	u16 left_shift_bits, right_shift_bits;
 	u8 nr_copy_bytes;
 	u8 nr_copy_bits;
-	u64 print_num[2] = {};
+	u64 print_num;
 
+	data += BITS_ROUNDDOWN_BYTES(bits_offset);
+	bits_offset = BITS_PER_BYTE_MASKED(bits_offset);
 	nr_copy_bits = nr_bits + bits_offset;
 	nr_copy_bytes = BITS_ROUNDUP_BYTES(nr_copy_bits);
 
-	memcpy(print_num, data, nr_copy_bytes);
+	print_num = 0;
+	memcpy(&print_num, data, nr_copy_bytes);
 
 #ifdef __BIG_ENDIAN_BITFIELD
 	left_shift_bits = bits_offset;
 #else
-	left_shift_bits = BITS_PER_U128 - nr_copy_bits;
+	left_shift_bits = BITS_PER_U64 - nr_copy_bits;
 #endif
-	right_shift_bits = BITS_PER_U128 - nr_bits;
+	right_shift_bits = BITS_PER_U64 - nr_bits;
 
-	btf_int128_shift(print_num, left_shift_bits, right_shift_bits);
-	btf_int128_print(m, print_num);
+	print_num <<= left_shift_bits;
+	print_num >>= right_shift_bits;
+
+	seq_printf(m, "0x%llx", print_num);
 }
-
 
 static void btf_int_bits_seq_show(const struct btf *btf,
 				  const struct btf_type *t,
@@ -1414,12 +1419,10 @@ static void btf_int_bits_seq_show(const struct btf *btf,
 
 	/*
 	 * bits_offset is at most 7.
-	 * BTF_INT_OFFSET() cannot exceed 128 bits.
+	 * BTF_INT_OFFSET() cannot exceed 64 bits.
 	 */
 	total_bits_offset = bits_offset + BTF_INT_OFFSET(int_data);
-	data += BITS_ROUNDDOWN_BYTES(total_bits_offset);
-	bits_offset = BITS_PER_BYTE_MASKED(total_bits_offset);
-	btf_bitfield_seq_show(data, bits_offset, nr_bits, m);
+	btf_bitfield_seq_show(data, total_bits_offset, nr_bits, m);
 }
 
 static void btf_int_seq_show(const struct btf *btf, const struct btf_type *t,
