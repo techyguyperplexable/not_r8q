@@ -2206,8 +2206,6 @@ retry:
 	}
 
 	deactivate_task(rq, next_task, 0);
-	sub_running_bw(&next_task->dl, &rq->dl);
-	sub_rq_bw(&next_task->dl, &rq->dl);
 	next_task->on_rq = TASK_ON_RQ_MIGRATING;
 #ifdef CONFIG_SONY_SCHED
 	walt_prepare_migrate(next_task, cpu_of(rq), cpu_of(later_rq), true);
@@ -2217,14 +2215,13 @@ retry:
 	walt_finish_migrate(next_task, cpu_of(rq), cpu_of(later_rq), true);
 #endif
 	next_task->on_rq = TASK_ON_RQ_QUEUED;
-	add_rq_bw(&next_task->dl, &later_rq->dl);
+	set_task_cpu(next_task, later_rq->cpu);
 
 	/*
 	 * Update the later_rq clock here, because the clock is used
 	 * by the cpufreq_update_util() inside __add_running_bw().
 	 */
 	update_rq_clock(later_rq);
-	add_running_bw(&next_task->dl, &later_rq->dl);
 	activate_task(later_rq, next_task, ENQUEUE_NOCLOCK);
 	ret = 1;
 
@@ -2312,8 +2309,6 @@ static void pull_dl_task(struct rq *this_rq)
 			resched = true;
 
 			deactivate_task(src_rq, p, 0);
-			sub_running_bw(&p->dl, &src_rq->dl);
-			sub_rq_bw(&p->dl, &src_rq->dl);
 			p->on_rq = TASK_ON_RQ_MIGRATING;
 #ifdef CONFIG_SONY_SCHED
 			walt_prepare_migrate(p, cpu_of(src_rq), cpu_of(this_rq), true);
@@ -2325,6 +2320,7 @@ static void pull_dl_task(struct rq *this_rq)
 			p->on_rq = TASK_ON_RQ_QUEUED;
 			add_rq_bw(&p->dl, &this_rq->dl);
 			add_running_bw(&p->dl, &this_rq->dl);
+			set_task_cpu(p, this_cpu);
 			activate_task(this_rq, p, 0);
 			dmin = p->dl.deadline;
 
