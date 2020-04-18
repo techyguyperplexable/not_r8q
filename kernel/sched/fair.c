@@ -65,6 +65,10 @@ walt_dec_cfs_rq_stats(struct cfs_rq *cfs_rq, struct task_struct *p) {}
 
 #endif
 
+#ifdef CONFIG_SMP
+static inline unsigned long boosted_task_util(struct task_struct *task);
+#endif
+
 /*
  * Targeted preemption latency for CPU-bound tasks:
  *
@@ -262,6 +266,12 @@ unsigned int sched_capacity_margin_up[NR_CPUS] = {
 			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
 unsigned int sched_capacity_margin_down[NR_CPUS] = {
 			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
+unsigned int sched_capacity_margin_up_boosted[NR_CPUS] = {
+	3658, 3658, 3658, 3658, 1078, 1078, 1078, 1024
+}; /* 72% margin for small, 5% for big, 0% for prime */
+unsigned int sched_capacity_margin_down_boosted[NR_CPUS] = {
+	3658, 3658, 3658, 3658, 3658, 3658, 3658, 3658
+}; /* not used for small cores, 72% margin for big, 72% margin for prime */
 
 /*
  * The margin used when comparing utilization with CPU capacity.
@@ -4058,9 +4068,13 @@ static inline bool task_fits_capacity(struct task_struct *p,
 	 * Derive upmigration/downmigrate margin wrt the src/dest CPU.
 	 */
 	if (capacity_orig_of(task_cpu(p)) > capacity_orig_of(cpu))
-		margin = sched_capacity_margin_down[cpu];
+		margin = schedtune_task_boost(p) > 0 ?
+			sched_capacity_margin_down_boosted[task_cpu(p)] :
+			sched_capacity_margin_down[task_cpu(p)];
 	else
-		margin = sched_capacity_margin_up[task_cpu(p)];
+		margin = schedtune_task_boost(p) > 0 ?
+			sched_capacity_margin_up_boosted[task_cpu(p)] :
+			sched_capacity_margin_up[task_cpu(p)];
 
 	return capacity * 1024 > uclamp_task_util(p, uclamp_min, uclamp_max) * margin;
 }
