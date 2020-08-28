@@ -2751,7 +2751,7 @@ static inline bool uclamp_rq_is_idle(struct rq *rq)
 }
 
 /**
- * uclamp_rq_util_with - clamp @util with @rq and @p effective uclamp values.
+ * uclamp_util_with - clamp @util with @rq and @p effective uclamp values.
  * @rq:		The rq to clamp against. Must not be NULL.
  * @util:	The util value to clamp.
  * @p:		The task to clamp against. Can be NULL if you want to clamp
@@ -2819,6 +2819,7 @@ static inline bool uclamp_is_used(void)
 	return static_branch_likely(&sched_uclamp_used);
 }
 #else /* CONFIG_UCLAMP_TASK */
+
 static inline
 unsigned long uclamp_rq_util_with(struct rq *rq, unsigned long util,
 				  struct task_struct *p)
