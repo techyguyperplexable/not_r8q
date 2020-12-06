@@ -690,7 +690,17 @@ int kgsl_drawobj_sync_add_sync(struct kgsl_device *device,
 	struct kgsl_drawobj_sync *syncobj,
 	struct kgsl_cmd_syncpoint *sync)
 {
+
+	union {
+		struct kgsl_cmd_syncpoint_timestamp sync_timestamp;
+		struct kgsl_cmd_syncpoint_fence sync_fence;
+	} data;
+	void *priv;
+	int psize;
 	struct kgsl_drawobj *drawobj = DRAWOBJ(syncobj);
+	int (*func)(struct kgsl_device *device,
+			struct kgsl_drawobj_sync *syncobj,
+			void *priv);
 
 	if (sync->type == KGSL_CMD_SYNCPOINT_TYPE_TIMESTAMP)
 		return drawobj_add_sync_timestamp_from_user(device,
@@ -705,7 +715,10 @@ int kgsl_drawobj_sync_add_sync(struct kgsl_device *device,
 	dev_err(device->dev, "bad syncpoint type %d for ctxt %d\n",
 		sync->type, drawobj->context->id);
 
-	return -EINVAL;
+	if (copy_from_user(priv, sync->priv, sync->size))
+		return -EFAULT;
+
+	return func(device, syncobj, priv);
 }
 
 static void add_profiling_buffer(struct kgsl_device *device,
