@@ -152,10 +152,10 @@ unsigned int sysctl_walt_low_latency_task_threshold; /* disabled by default */
 
 unsigned int capacity_margin				= 1344;
 
-unsigned int sched_capacity_margin_up[CPU_NR] = {
-			[0 ... CPU_NR-1] = 1078}; /* ~5% margin */
-unsigned int sched_capacity_margin_down[CPU_NR] = {
-			[0 ... CPU_NR-1] = 1205}; /* ~15% margin */
+unsigned int sched_capacity_margin_up[NR_CPUS] = {
+			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
+unsigned int sched_capacity_margin_down[NR_CPUS] = {
+			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
 			
 unsigned int sched_capacity_margin_up_boosted[NR_CPUS] = {
 	3658, 3658, 3658, 3658, 1078, 1078, 1078, 1024
