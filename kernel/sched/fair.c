@@ -254,25 +254,6 @@ int __weak arch_asym_cpu_priority(int cpu)
  */
 unsigned int sysctl_sched_cfs_bandwidth_slice		= 5000UL;
 #endif
-
-/*
- * The margin used when comparing utilization with CPU capacity:
- * util * margin < capacity * 1024
- *
- * (default: ~20%)
- */
-unsigned int capacity_margin				= 1280;
-unsigned int sched_capacity_margin_up[NR_CPUS] = {
-			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
-unsigned int sched_capacity_margin_down[NR_CPUS] = {
-			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
-unsigned int sched_capacity_margin_up_boosted[NR_CPUS] = {
-	3658, 3658, 3658, 3658, 1078, 1078, 1078, 1024
-}; /* 72% margin for small, 5% for big, 0% for prime */
-unsigned int sched_capacity_margin_down_boosted[NR_CPUS] = {
-	3658, 3658, 3658, 3658, 3658, 3658, 3658, 3658
-}; /* not used for small cores, 72% margin for big, 72% margin for prime */
-
 /*
  * The margin used when comparing utilization with CPU capacity.
  *
@@ -289,7 +270,26 @@ __read_mostly unsigned int sysctl_sched_prefer_spread;
 unsigned int sysctl_walt_rtg_cfs_boost_prio = 99; /* disabled by default */
 unsigned int sysctl_walt_low_latency_task_threshold; /* disabled by default */
 #endif
-unsigned int sched_small_task_threshold = 102;
+
+/*
+ * The margin used when comparing utilization with CPU capacity:
+ * util * margin < capacity * 1024
+ *
+ * (default: ~20%)
+ */
+unsigned int capacity_margin				= 1280;
+
+unsigned int sched_capacity_margin_up[NR_CPUS] = {
+			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
+unsigned int sched_capacity_margin_down[NR_CPUS] = {
+			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
+unsigned int sched_capacity_margin_up_boosted[NR_CPUS] = {
+	3658, 3658, 3658, 3658, 1078, 1078, 1078, 1024
+}; /* 72% margin for small, 5% for big, 0% for prime */
+unsigned int sched_capacity_margin_down_boosted[NR_CPUS] = {
+	3658, 3658, 3658, 3658, 3658, 3658, 3658, 3658
+}; /* not used for small cores, 72% margin for big, 72% margin for prime */
+
 __read_mostly unsigned int sysctl_sched_force_lb_enable = 1;
 
 static inline void update_load_add(struct load_weight *lw, unsigned long inc)
@@ -10644,9 +10644,7 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 		 */
 		if (env->sd->flags & SD_ASYM_CPUCAPACITY &&
 		    capacity_of(env->dst_cpu) < capacity &&
-		    (rq->nr_running == 1 ||
-			 (rq->nr_running == 2 && task_util(rq->curr) <
-			  sched_small_task_threshold)))
+		    rq->nr_running == 1)
 			continue;
 
 		load = cpu_runnable_load(rq);
