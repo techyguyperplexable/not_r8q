@@ -879,6 +879,9 @@ static void dl_update_tasks_root_domain(struct cpuset *cs)
 	struct css_task_iter it;
 	struct task_struct *task;
 
+	if (cs->nr_deadline_tasks == 0)
+		return;
+
 	css_task_iter_start(&cs->css, 0, &it);
 
 	while ((task = css_task_iter_next(&it)))
@@ -1903,12 +1906,12 @@ static ssize_t cpuset_write_resmask_wrapper(struct kernfs_open_file *of,
 					 char *buf, size_t nbytes, loff_t off)
 {
 	static struct cs_target cs_targets[] = {
-		{ "audio-app",		"4,7" },
-		{ "background",		"4-6" },
-		{ "camera-daemon",	"4-7" },
-		{ "foreground",		"0-3" },
-		{ "restricted",		"4-6" },
-		{ "system-background",	"4-6" },
+		{ "audio-app",		"1-3,6" },
+		{ "background",		"0-2" },
+		{ "camera-daemon",	"0-7" },
+		{ "foreground",		"0-2" },
+		{ "restricted",		"0-3" },
+		{ "system-background",	"0-2" },
 		{ "top-app",		"0-7" },
 	};
 	struct cpuset *cs = css_cs(of_css(of));
