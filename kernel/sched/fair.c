@@ -7923,6 +7923,9 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		return new_cpu;
 	}
 
+	if (sd_flag & SD_BALANCE_EXEC)
+		return prev_cpu;
+
 	if (sd_flag & SD_BALANCE_WAKE) {
 		int _wake_cap = wake_cap(p, cpu, prev_cpu);
 		int _cpus_allowed = cpumask_test_cpu(cpu, p->cpus_ptr);
