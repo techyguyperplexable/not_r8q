@@ -415,17 +415,7 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 	clip_freq = get_state_freq(cpufreq_cdev, state);
 	cpufreq_cdev->cpufreq_state = state;
 	cpufreq_cdev->clipped_freq = clip_freq;
-
-	/* Check if the device has a platform mitigation function that
-	 * can handle the CPU freq mitigation, if not, notify cpufreq
-	 * framework.
-	 */
-	if (cpufreq_cdev->plat_ops &&
-		cpufreq_cdev->plat_ops->ceil_limit)
-		cpufreq_cdev->plat_ops->ceil_limit(cpufreq_cdev->policy->cpu,
-							clip_freq);
-	else
-		cpufreq_update_policy(cpufreq_cdev->policy->cpu);
+        cpufreq_update_policy(cpufreq_cdev->policy->cpu);
 
 	return 0;
 }
