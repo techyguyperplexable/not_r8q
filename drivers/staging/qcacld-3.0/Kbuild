@@ -3344,6 +3344,8 @@ EXTRA_CFLAGS += -DSEC_WRITE_SOFTAP_INFO_IN_SYSFS
 endif
 
 ccflags-y += -Wmissing-prototypes
+ccflags-y += -Os
+ccflags-y += -g0
 
 ifeq ($(call cc-option-yn, -Wheader-guard), y)
 ccflags-y += -Wheader-guard
