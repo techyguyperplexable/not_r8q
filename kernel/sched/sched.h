@@ -3226,7 +3226,7 @@ static inline void clear_reserved(int cpu)
 	per_cpu(cpu_reserved, cpu) = false;
 }
 
-void check_for_task_rotation(struct rq *src_rq);
+void check_for_task_rotation(struct rq *src_rq, int cpu);
 u64 sched_ktime_clock(void);
 #else
 static inline int is_reserved(int cpu)
