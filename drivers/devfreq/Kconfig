@@ -247,6 +247,4 @@ config DEVFREQ_GOV_STATICMAP
 	  This governor votes for the DDR BW based on the device's clock rate
 	  change.
 
-source "drivers/devfreq/event/Kconfig"
-
 endif # PM_DEVFREQ
