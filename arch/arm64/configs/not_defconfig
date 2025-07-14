@@ -1,13 +1,13 @@
 #
 # DO NOT EDIT.
-# Linux/arm64 4.19.331-st4 Not_Kernel Configuration
+# Linux/arm64 4.19.331-st5 Not_Kernel Configuration
 #
 
 #
 # General setup
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
-CONFIG_LOCALVERSION="-not-starlord"
+CONFIG_LOCALVERSION="-not-void"
 CONFIG_HAVE_KERNEL_GZIP=y
 CONFIG_HAVE_KERNEL_LZ4=y
 CONFIG_KERNEL_GZIP=y
