@@ -30,6 +30,10 @@ struct cass_cpu_cand {
 	unsigned int exit_lat;
 	unsigned long cap;
 	unsigned long cap_max;
+	unsigned long cap_no_therm;
+	unsigned long cap_orig;
+	unsigned long eff_util;
+	unsigned long hard_util;
 	unsigned long util;
 };
 
@@ -50,23 +54,27 @@ void cass_cpu_util(struct cass_cpu_cand *c, int this_cpu, bool sync)
 			c->util = est;
 		}
 	}
-
-	/*
-	 * Account for lost capacity due to time spent in RT/DL tasks and IRQs.
-	 * Capacity is considered lost to RT tasks even when @p is an RT task in
-	 * order to produce consistently balanced task placement results between
-	 * CFS and RT tasks when CASS selects a CPU for them.
-	 */
-	 c->cap = c->cap_max - min(cpu_util_rt(rq) + cpu_util_dl(rq) +
-				  cpu_util_irq(rq), c->cap_max - 1);
-
-
+	
 	/*
 	 * Deduct @current's util from this CPU if this is a sync wake, unless
 	 * @current is an RT task; RT tasks don't have per-entity load tracking.
 	 */
 	if (sync && c->cpu == this_cpu && !rt_task(current))
 		c->util -= min(c->util, task_util(current));
+
+	/* Get the utilization of everything other than CFS tasks */
+	c->hard_util = cpu_util_rt(rq) + cpu_util_dl(rq) + cpu_util_irq(rq);
+	
+	/*
+	 * Account for lost capacity due to time spent in RT/DL tasks and IRQs.
+	 * Capacity is considered lost to RT tasks even when @p is an RT task in
+	 * order to produce consistently balanced task placement results between
+	 * CFS and RT tasks when CASS selects a CPU for them.
+	 */
+	 c->cap = c->cap_max - min(c->hard_util, c->cap_max - 1);
+	 
+	/* Get the current capacity with thermal pressure excluded */
+	c->cap_no_therm = c->cap_orig - min(c->hard_util, c->cap_orig - 1);
 }
 
 /* Returns true if @a is a better CPU than @b */
@@ -79,6 +87,16 @@ bool cass_cpu_better(const struct cass_cpu_cand *a,
 #define cass_eq(a, b) ({ res = (a) == (b); })
 	long res;
 
+	/* Prefer the CPU that's not overloaded */
+	if (cass_cmp(b->eff_util / b->cap_max, a->eff_util / a->cap_max))
+		goto done;
+
+	/* Prefer the CPU that's less overloaded if they're both overloaded */
+	if (b->eff_util > b->cap_max && a->eff_util > a->cap_max &&
+	    cass_cmp(b->eff_util * SCHED_CAPACITY_SCALE / b->cap_max,
+		     a->eff_util * SCHED_CAPACITY_SCALE / a->cap_max))
+		goto done;
+		
 	/* Prefer the CPU with lower relative utilization */
 	if (cass_cmp(b->util, a->util))
 		goto done;
@@ -148,8 +166,11 @@ static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync, bool rt
 		struct cpuidle_state *idle_state;
 		struct rq *rq = cpu_rq(cpu);
 
-		/* Get the capacity of this CPU */
+		/* Get the original, maximum _possible_ capacity of this CPU */
 		curr->cap_max = arch_scale_cpu_capacity(NULL, cpu);
+		
+		/* Get the _current_,maximum capacity of this CPU */
+		curr->cap_max = curr->cap_orig;
 
 		/* Prefer the CPU that meets the uclamp minimum requirement */
 		if (curr->cap_max < uc_min && best->cap_max >= uc_min)
@@ -200,9 +221,14 @@ static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync, bool rt
 		if (cpu != task_cpu(p))
 			curr->util += p_util;
 			
-		/* Clamp the utilization to the minimum performance threshold */
-		if (curr->util < uc_min)
-			curr->util = uc_min;
+		/*
+		 * Calculate the effective utilization for this CPU candidate;
+		 * i.e., the utilization calculated by the CPU governor. This is
+		 * needed to evaluate whether or not a throttled CPU is
+		 * overloaded, since the relative utilization calculation
+		 * disregards thermal pressure.
+		 */
+		curr->eff_util = max(curr->util + curr->hard_util, uc_min);
 
 		/* Calculate the relative utilization for this CPU candidate */
 		curr->util = curr->util * SCHED_CAPACITY_SCALE / curr->cap;
