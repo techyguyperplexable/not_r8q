@@ -58,6 +58,9 @@
 #include <linux/fs_struct.h>
 #include <linux/namei.h>
 #include <linux/bio.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+#include <linux/bvec.h>
+#endif
 #include <linux/blkdev.h>
 #include <linux/swap.h> /* for mark_page_accessed() */
 #include <asm/current.h>
@@ -315,7 +318,7 @@ static void __mpage_write_end_io(struct bio *bio, int err)
 	ASSERT(bio_data_dir(bio) == WRITE); /* only write */
 
 	/* Use bio_for_each_segemnt_all() to support multi-page bvec */
-	bio_for_each_segment_all(bv, bio, i, iter_all)
+	bio_for_each_segment_all(bv, bio, i)
 		__page_write_endio(bv->bv_page, err);
 #else
 	ASSERT(bio_data_dir(bio) == WRITE); /* only write */
