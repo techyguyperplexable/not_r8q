@@ -584,26 +584,8 @@ static int wessel_request_merge(struct request_queue *q, struct request **rq,
 
 	return ELEVATOR_NO_MERGE;
 }
-#if 0
-static bool wessel_bio_merge(struct request_queue *q, struct bio *bio,
-		unsigned int nr_segs)
-{
-	struct wessel_data *wessel = q->elevator->elevator_data;
-	struct request *free = NULL;
-	bool ret;
 
-	spin_lock(&wessel->lock);
-	ret = blk_mq_sched_try_merge(q, bio, &free);
-	spin_unlock(&wessel->lock);
-
-	if (free)
-		blk_mq_free_request(free);
-
-	return ret;
-}
-#endif
-
-bool wessel_bio_merge(struct blk_mq_hw_ctx *hctx, struct bio *bio)
+static bool wessel_bio_merge(struct blk_mq_hw_ctx *hctx,struct bio *bio)
 {
 	struct request_queue *q = hctx->queue;
 	struct wessel_data *wessel = q->elevator->elevator_data;
