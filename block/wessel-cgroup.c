@@ -67,8 +67,8 @@ static void wessel_blkcg_cpd_free(struct blkcg_policy_data *cpd)
 static void wessel_blkcg_set_shallow_depth(struct wessel_blkcg *wessel_blkcg,
 		struct wessel_blkg *wessel_blkg, struct blk_mq_tags *tags)
 {
-	unsigned int depth = tags->bitmap_tags->sb.depth;
-	unsigned int map_nr = tags->bitmap_tags->sb.map_nr;
+	unsigned int depth = tags->bitmap_tags.sb.depth;
+	unsigned int map_nr = tags->bitmap_tags.sb.map_nr;
 
 	wessel_blkg->max_available_rqs =
 		depth * wessel_blkcg->max_available_ratio / 100U;
@@ -76,12 +76,11 @@ static void wessel_blkcg_set_shallow_depth(struct wessel_blkcg *wessel_blkcg,
 		max_t(unsigned int, 1, wessel_blkg->max_available_rqs / map_nr);
 }
 
-static struct blkg_policy_data *wessel_blkcg_pd_alloc(gfp_t gfp,
-		struct request_queue *q, struct blkcg *blkcg)
+static struct blkg_policy_data *wessel_blkcg_pd_alloc(gfp_t gfp, int node)
 {
 	struct wessel_blkg *wessel_blkg;
 
-	wessel_blkg = kzalloc_node(sizeof(struct wessel_blkg), gfp, q->node);
+	wessel_blkg = kzalloc_node(sizeof(struct wessel_blkg), gfp, node);
 	if (ZERO_OR_NULL_PTR(wessel_blkg))
 		return NULL;
 
