@@ -394,8 +394,8 @@ static void wessel_completed_request(struct request *rq, u64 now)
 
 static void wessel_set_shallow_depth(struct wessel_data *wessel, struct blk_mq_tags *tags)
 {
-	unsigned int depth = tags->bitmap_tags->sb.depth;
-	unsigned int map_nr = tags->bitmap_tags->sb.map_nr;
+	unsigned int depth = tags->bitmap_tags.sb.depth;
+	unsigned int map_nr = tags->bitmap_tags.sb.map_nr;
 
 	wessel->max_async_write_rqs = depth * max_async_write_ratio / 100U;
 	wessel->max_async_write_rqs =
@@ -413,7 +413,7 @@ static void wessel_depth_updated(struct blk_mq_hw_ctx *hctx)
 	struct request_queue *q = hctx->queue;
 	struct wessel_data *wessel = q->elevator->elevator_data;
 	struct blk_mq_tags *tags = hctx->sched_tags;
-	unsigned int depth = tags->bitmap_tags->sb.depth;
+	unsigned int depth = tags->bitmap_tags.sb.depth;
 
 	wessel->congestion_threshold_rqs = depth * congestion_threshold / 100U;
 
@@ -424,7 +424,7 @@ static void wessel_depth_updated(struct blk_mq_hw_ctx *hctx)
 		wessel->rq_info = NULL;
 
 	wessel_set_shallow_depth(wessel, tags);
-	sbitmap_queue_min_shallow_depth(tags->bitmap_tags,
+	sbitmap_queue_min_shallow_depth(&tags->bitmap_tags,
 			wessel->async_write_shallow_depth);
 
 	wessel_blkcg_depth_updated(hctx);
@@ -491,7 +491,7 @@ static int wessel_init_hctx(struct blk_mq_hw_ctx *hctx, unsigned int hctx_idx)
 	struct blk_mq_tags *tags = hctx->sched_tags;
 
 	wessel_set_shallow_depth(wessel, tags);
-	sbitmap_queue_min_shallow_depth(tags->bitmap_tags,
+	sbitmap_queue_min_shallow_depth(&tags->bitmap_tags,
 			wessel->async_write_shallow_depth);
 
 	return 0;
@@ -584,7 +584,7 @@ static int wessel_request_merge(struct request_queue *q, struct request **rq,
 
 	return ELEVATOR_NO_MERGE;
 }
-
+#if 0
 static bool wessel_bio_merge(struct request_queue *q, struct bio *bio,
 		unsigned int nr_segs)
 {
@@ -593,7 +593,25 @@ static bool wessel_bio_merge(struct request_queue *q, struct bio *bio,
 	bool ret;
 
 	spin_lock(&wessel->lock);
-	ret = blk_mq_sched_try_merge(q, bio, nr_segs, &free);
+	ret = blk_mq_sched_try_merge(q, bio, &free);
+	spin_unlock(&wessel->lock);
+
+	if (free)
+		blk_mq_free_request(free);
+
+	return ret;
+}
+#endif
+
+bool wessel_bio_merge(struct blk_mq_hw_ctx *hctx, struct bio *bio)
+{
+	struct request_queue *q = hctx->queue;
+	struct wessel_data *wessel = q->elevator->elevator_data;
+	struct request *free = NULL;
+	bool ret;
+
+	spin_lock(&wessel->lock);
+	ret = blk_mq_sched_try_merge(q, bio, &free);
 	spin_unlock(&wessel->lock);
 
 	if (free)
@@ -666,7 +684,7 @@ static void wessel_insert_requests(struct blk_mq_hw_ctx *hctx,
  * Nothing to do here. This is defined only to ensure that .finish_request
  * method is called upon request completion.
  */
-static void wessel_prepare_request(struct request *rq)
+static void wessel_prepare_request(struct request *rq, struct bio *bio)
 {
 	struct wessel_data *wessel = rq->q->elevator->elevator_data;
 	struct wessel_request_info *rqi;
@@ -948,7 +966,6 @@ static struct elevator_type wessel_iosched = {
 	.elevator_attrs = wessel_attrs,
 	.elevator_name = "wessel",
 	.elevator_alias = "wessel",
-	.elevator_features = ELEVATOR_F_ZBD_SEQ_WRITE,
 	.elevator_owner = THIS_MODULE,
 };
 MODULE_ALIAS("wessel");
