@@ -132,7 +132,6 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE,
 	BPF_MAP_TYPE_QUEUE,
 	BPF_MAP_TYPE_STACK,
-	BPF_MAP_TYPE_DEVMAP_HASH = 25,
 };
 
 /* Note that tracing related programs such as
