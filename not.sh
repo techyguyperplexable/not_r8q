@@ -2,7 +2,7 @@
 LLVM_PATH="/home/skye/bomb/clang/bin/"
 SD_PATH="/home/skye/bomb/clangsd/bin/"
 
-KERNEL_NAME="not_kernel-CYHTM-"
+KERNEL_NAME="not_kernel-ACID🧪-"
 
 HOST_BUILD_ENV="ARCH=arm64 \
                 CC=${SD_PATH}clang \
