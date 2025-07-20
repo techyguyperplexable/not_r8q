@@ -390,7 +390,7 @@ u64 approximate_runtime(unsigned long util);
  */
 static inline bool dl_task_fits_capacity(struct task_struct *p, int cpu)
 {
-	unsigned long cap = arch_scale_cpu_capacity(NULL, cpu);
+	unsigned long cap = arch_scale_cpu_capacity(cpu);
 
 	return cap_scale(p->dl.dl_deadline, cap) >= p->dl.dl_runtime;
 }
@@ -2016,7 +2016,10 @@ extern struct sched_class __end_sched_classes[];
 #define sched_class_lowest  (__begin_sched_classes - 1)
 
 #define for_class_range(class, _from, _to) \
-	for (class = (_from); class != (_to); class = class->next)
+	for (class = (_from); class != (_to); class--)
+	
+//#define for_class_range(class, _from, _to) \
+//	for (class = (_from); class != (_to); class = class->next)
 
 
 #define for_each_class(class) \

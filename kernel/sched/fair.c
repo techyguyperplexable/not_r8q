@@ -264,13 +264,6 @@ unsigned int sched_capacity_margin_down[NR_CPUS] = {
 			1024, 1024, 1024, 1024, 1796, 1796, 1796, 1442
 }; /* Not used for small, ~43% margin for big, ~29% for prime */
 
-/*
- * The margin used when comparing utilization with CPU capacity.
- *
- * (default: ~20%)
- */
-#define fits_capacity(cap, max)	((cap) * 1280 < (max) * 1024)
-
 #ifdef CONFIG_SCHED_WALT
 /* 1ms default for 20ms window size scaled to 1024 */
 unsigned int sysctl_sched_min_task_util_for_boost = 51;
@@ -4063,7 +4056,7 @@ static inline bool task_fits_capacity(struct task_struct *p,
 	else
 		margin = sched_capacity_margin_up[task_cpu(p)];
 
-	return fits_capacity(uclamp_task_util(p), capacity, margin);
+	return fits_capacity(uclamp_task_util(p, uclamp_min, uclamp_max), capacity, margin);
 }
 
 static inline bool task_fits_max(struct task_struct *p, int cpu)
@@ -7730,7 +7723,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 	int start_cpu;
 
 	if (is_many_wakeup(sibling_count_hint) && prev_cpu != cpu &&
-			cpumask_test_cpu(prev_cpu, &p->cpus_allowed))
+			cpumask_test_cpu(prev_cpu, p->cpus_ptr))
 		return prev_cpu;
 
 	start_cpu = get_start_cpu(p);
@@ -7950,7 +7943,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 
 		want_affine = !wake_wide(p, sibling_count_hint) &&
 			      !wake_cap(p, cpu, prev_cpu) &&
-			      cpumask_test_cpu(cpu, &p->cpus_allowed);
+			      cpumask_test_cpu(cpu, p->cpus_ptr);
 	}
 
 sd_loop:
@@ -9051,7 +9044,7 @@ next:
 #ifdef CONFIG_SCHED_WALT
 		trace_sched_load_balance_skip_tasks(env->src_cpu, env->dst_cpu,
 				env->src_grp_type, p->pid, load, task_util(p),
-				cpumask_bits(&p->cpus_allowed)[0]);
+				cpumask_bits(p->cpus_ptr)[0]);
 #endif
 		list_move(&p->se.group_node, tasks);
 	}

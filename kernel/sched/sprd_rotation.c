@@ -2,6 +2,9 @@
 
 #include <linux/syscore_ops.h>
 
+#undef fits_capacity
+#define fits_capacity(cap, max) ((cap) * 1280 < (max) * 1024)
+
 /* ========================= define data struct =========================== */
 struct rotation_data {
 	struct task_struct *rotation_thread;
@@ -124,8 +127,8 @@ void check_for_task_rotation(struct rq *src_rq)
 	double_rq_lock(src_rq, dst_rq);
 	if (!src_rq->active_balance && !dst_rq->active_balance) {
 
-		if (!cpumask_test_cpu(dst_cpu, &src_rq->curr->cpus_allowed) ||
-		    !cpumask_test_cpu(src_cpu, &dst_rq->curr->cpus_allowed)) {
+		if (!cpumask_test_cpu(dst_cpu, src_rq->curr->cpus_ptr) ||
+		    !cpumask_test_cpu(src_cpu, dst_rq->curr->cpus_ptr)) {
 			double_rq_unlock(src_rq, dst_rq);
 			return;
 		}
@@ -319,3 +322,6 @@ static int __init sched_init_ops(void)
 	return 0;
 }
 late_initcall(sched_init_ops);
+
+#undef fits_capacity
+#define fits_capacity(cap, max, margin)	((cap) * margin < (max) * 1024)
