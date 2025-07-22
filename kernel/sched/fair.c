@@ -261,8 +261,7 @@ unsigned int capacity_margin				= 1280;
 unsigned int sched_capacity_margin_up[NR_CPUS] = {
 			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
 unsigned int sched_capacity_margin_down[NR_CPUS] = {
-			1024, 1024, 1024, 1024, 1796, 1796, 1796, 1442
-}; /* Not used for small, ~43% margin for big, ~29% for prime */
+			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
 
 /*
  * The margin used when comparing utilization with CPU capacity.
