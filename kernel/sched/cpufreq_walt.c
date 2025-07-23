@@ -17,31 +17,25 @@
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
 #include <linux/version.h>
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
-#include <trace/hooks/sched.h>
-#endif
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 14, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 #include <linux/sched/cpufreq.h>
 #include <uapi/linux/sched/types.h>
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
 #include <linux/cpufreq.h>
 #include <linux/slab.h>
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 #include "sched.h"
-#endif
 #ifdef CONFIG_SCHED_WALT
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
-#include "walt/walt.h"
-#else
 #include "walt.h"
 #endif
-#endif
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0)
-#include "trace.h"
-#endif
+
+#define DEFAULT_TARGET_LOAD (0)
+#define KHZ 1000
+#define TARGET_LOAD 80
+#define NL_RATIO 75
+#define DEFAULT_HISPEED_LOAD 90
+#define DEFAULT_CPU0_RTG_BOOST_FREQ 1000000
+#define DEFAULT_CPU4_RTG_BOOST_FREQ 768000
+#define DEFAULT_CPU7_RTG_BOOST_FREQ 0
+#define DEFAULT_TARGET_LOAD_THRESH 1024
+#define DEFAULT_TARGET_LOAD_SHIFT 4
 
 struct waltgov_tunables {
 	struct gov_attr_set	attr_set;
@@ -132,7 +126,6 @@ static DEFINE_PER_CPU(struct waltgov_cpu, waltgov_cpu);
 static unsigned int stale_ns;
 static DEFINE_PER_CPU(struct waltgov_tunables *, cached_tunables);
 
-#define DEFAULT_TARGET_LOAD (0)
 static int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
 /************************ Governor internals ***********************/
@@ -245,7 +238,6 @@ static unsigned long freq_to_util(struct waltgov_policy *wg_policy,
 			 wg_policy->policy->cpuinfo.max_freq);
 }
 
-#define KHZ 1000
 static void waltgov_track_cycles(struct waltgov_policy *wg_policy,
 				unsigned int prev_freq,
 				u64 upto)
@@ -328,7 +320,6 @@ static void waltgov_deferred_update(struct waltgov_policy *wg_policy, u64 time,
 #endif
 }
 
-#define TARGET_LOAD 80
 static inline unsigned long walt_map_util_freq(unsigned long util,
 					struct waltgov_policy *wg_policy,
 					unsigned long cap, int cpu)
@@ -573,13 +564,6 @@ static unsigned long waltgov_get_util(struct waltgov_cpu *wg_cpu)
 }
 #endif
 
-#define NL_RATIO 75
-#define DEFAULT_HISPEED_LOAD 90
-#define DEFAULT_CPU0_RTG_BOOST_FREQ 1000000
-#define DEFAULT_CPU4_RTG_BOOST_FREQ 768000
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 14, 0)
-#define DEFAULT_CPU7_RTG_BOOST_FREQ 0
-#endif
 static int find_target_boost(unsigned long util, struct waltgov_policy *wg_policy,
 				unsigned long *min_util)
 {
@@ -629,8 +613,6 @@ unsigned long sched_cpu_util(int cpu)
 }
 #endif
 
-#define DEFAULT_TARGET_LOAD_THRESH 1024
-#define DEFAULT_TARGET_LOAD_SHIFT 4
 #ifdef CONFIG_SCHED_WALT
 static void waltgov_walt_adjust(struct waltgov_cpu *wg_cpu, unsigned long cpu_util,
 				unsigned long nl, unsigned long *util,
