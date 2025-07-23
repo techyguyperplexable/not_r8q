@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * This is based on schedutil governor but modified to work with
- * WALT.
- *
- * Support with old kernel min version 4.9
+ * Scheduler code and data structures related 
+ * to cpufreq modified to work with WALT.
  *
  * Copyright (C) 2016, Intel Corporation
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
@@ -129,7 +127,11 @@ static bool waltgov_should_update_freq(struct waltgov_policy *wg_policy, u64 tim
 		wg_policy->need_freq_update = true;
 		return true;
 	}
-
+	
+	/* If the last frequency wasn't set yet then we can still amend it */
+	if (wg_policy->work_in_progress)
+		return true;
+		
 	/*
 	 * No need to recalculate next freq for min_rate_limit_us
 	 * at least. However we might still decide to further rate
