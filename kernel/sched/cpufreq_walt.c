@@ -26,14 +26,14 @@
 #include "walt.h"
 #endif
 
-#define DEFAULT_TARGET_LOAD (0)
+#define DEFAULT_TARGET_LOAD (80)
 #define KHZ 1000
-#define TARGET_LOAD 80
+#define TARGET_LOAD 85
 #define NL_RATIO 75
 #define DEFAULT_HISPEED_LOAD 90
-#define DEFAULT_CPU0_RTG_BOOST_FREQ 1000000
-#define DEFAULT_CPU4_RTG_BOOST_FREQ 768000
-#define DEFAULT_CPU7_RTG_BOOST_FREQ 0
+#define DEFAULT_CPU0_RTG_BOOST_FREQ 979200
+#define DEFAULT_CPU4_RTG_BOOST_FREQ 940800
+#define DEFAULT_CPU7_RTG_BOOST_FREQ 1075200
 #define DEFAULT_TARGET_LOAD_THRESH 1024
 #define DEFAULT_TARGET_LOAD_SHIFT 4
 
@@ -1534,8 +1534,4 @@ struct cpufreq_governor *cpufreq_default_governor(void)
 }
 #endif
 
-static int __init waltgov_register(void)
-{
-	return cpufreq_register_governor(&walt_gov);
-}
-fs_initcall(waltgov_register);
+cpufreq_governor_init(walt_gov);
