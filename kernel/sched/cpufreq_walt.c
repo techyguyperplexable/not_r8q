@@ -121,10 +121,8 @@ static bool waltgov_should_update_freq(struct waltgov_policy *wg_policy, u64 tim
 {
 	s64 delta_ns;
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 19, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 	if (!cpufreq_this_cpu_can_update(wg_policy->policy))
 		return false;
-#endif
 
 	if (unlikely(wg_policy->limits_changed)) {
 		wg_policy->limits_changed = false;
@@ -257,18 +255,9 @@ static void waltgov_fast_switch(struct waltgov_policy *wg_policy, u64 time,
 			      unsigned int next_freq)
 {
 	struct cpufreq_policy *policy = wg_policy->policy;
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0))
-	int cpu;
-#endif
 
 	waltgov_track_cycles(wg_policy, wg_policy->policy->cur, time);
 	cpufreq_driver_fast_switch(policy, next_freq);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0))
-	if (trace_cpu_frequency_enabled()) {
-		for_each_cpu(cpu, policy->cpus)
-			trace_cpu_frequency(next_freq, cpu);
-	}
-#endif
 }
 
 static void waltgov_deferred_update(struct waltgov_policy *wg_policy, u64 time,
@@ -389,7 +378,6 @@ schedtune_cpu_margin_with(unsigned long util, int cpu, struct task_struct *p);
  * based on the task model parameters and gives the minimal utilization
  * required to meet deadlines.
  */
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 19, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 unsigned long walt_cpu_util(int cpu, unsigned long util_cfs,
 				 unsigned long max, enum schedutil_type type,
 				 struct task_struct *p)
@@ -397,11 +385,7 @@ unsigned long walt_cpu_util(int cpu, unsigned long util_cfs,
 	unsigned long dl_util, util, irq;
 	struct rq *rq = cpu_rq(cpu);
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0)
 	if (!uclamp_is_used() && sched_feat(SUGOV_RT_MAX_FREQ) &&
-#else
-	if (sched_feat(SUGOV_RT_MAX_FREQ) && !IS_BUILTIN(CONFIG_UCLAMP_TASK) &&
-#endif
 	    type == FREQUENCY_UTIL && rt_rq_is_runnable(&rq->rt)) {
 		return max;
 	}
@@ -429,11 +413,7 @@ unsigned long walt_cpu_util(int cpu, unsigned long util_cfs,
 	 */
 	util = util_cfs + cpu_util_rt(rq);
 	if (type == FREQUENCY_UTIL)
-/*#ifdef CONFIG_SCHED_TUNE
-		util += schedtune_cpu_margin_with(util, cpu, p);
-#else*/
 		util = uclamp_rq_util_with(rq, util, p);
-//#endif
 
 	dl_util = cpu_util_dl(rq);
 
@@ -483,7 +463,6 @@ unsigned long walt_cpu_util(int cpu, unsigned long util_cfs,
 
 	return min(max, util);
 }
-#endif
 
 #ifdef CONFIG_SCHED_WALT
 static unsigned long waltgov_get_util(struct waltgov_cpu *wg_cpu)
@@ -1626,9 +1605,7 @@ static void waltgov_limits(struct cpufreq_policy *policy)
 static struct cpufreq_governor walt_gov = {
 	.name			= "walt",
 	.owner			= THIS_MODULE,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 	.dynamic_switching	= true,
-#endif
 	.init			= waltgov_init,
 	.exit			= waltgov_exit,
 	.start			= waltgov_start,
