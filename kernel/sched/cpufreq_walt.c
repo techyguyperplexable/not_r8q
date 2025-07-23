@@ -620,6 +620,15 @@ static inline bool waltgov_cpu_is_busy(struct waltgov_cpu *wg_cpu) { return fals
 #endif /* CONFIG_NO_HZ_COMMON */
 #endif
 
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_WALT
+unsigned long sched_cpu_util(int cpu)
+{
+	unsigned long max = arch_scale_cpu_capacity(cpu);
+
+	return walt_cpu_util(cpu, cpu_util_cfs(cpu_rq(cpu)), max, ENERGY_UTIL, NULL);
+}
+#endif
+
 #define DEFAULT_TARGET_LOAD_THRESH 1024
 #define DEFAULT_TARGET_LOAD_SHIFT 4
 #ifdef CONFIG_SCHED_WALT

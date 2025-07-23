@@ -30,7 +30,9 @@ obj-$(CONFIG_SCHED_DEBUG) += debug.o
 obj-$(CONFIG_SCHED_TUNE) += tune.o
 obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
 obj-$(CONFIG_CPU_FREQ) += cpufreq.o
+ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_WALT
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTIL) += cpufreq_schedutil.o
+endif
 obj-$(CONFIG_CPU_FREQ_GOV_WALT) += cpufreq_walt.o
 obj-$(CONFIG_MEMBARRIER) += membarrier.o
 obj-$(CONFIG_CPU_ISOLATION) += isolation.o
