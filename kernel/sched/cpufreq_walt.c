@@ -24,22 +24,31 @@
 #include "walt.h"
 #endif
 
-#define DEFAULT_TARGET_LOAD (90)
 #define KHZ 1000
+#define DEFAULT_TARGET_LOAD (0)
 #define TARGET_LOAD 90
-#define NL_RATIO 75
+#define NL_RATIO 70
 #define DEFAULT_HISPEED_LOAD 90
-#define DEFAULT_CPU0_RTG_BOOST_FREQ 979200
-#define DEFAULT_CPU4_RTG_BOOST_FREQ 940800
-#define DEFAULT_CPU7_RTG_BOOST_FREQ 1075200
-#define DEFAULT_UP_RATE0 2000
-#define DEFAULT_DOWN_RATE0 2000
-#define DEFAULT_UP_RATE4 5500
-#define DEFAULT_DOWN_RATE4 2000
-#define DEFAULT_UP_RATE7 3500
-#define DEFAULT_DOWN_RATE7 2000
-#define DEFAULT_TARGET_LOAD_THRESH 1280
+#define DEFAULT_CPU0_RTG_BOOST_FREQ 1248000
+#define DEFAULT_CPU4_RTG_BOOST_FREQ 1286400
+#define DEFAULT_CPU7_RTG_BOOST_FREQ 1305600
+#define DEFAULT_UP_RATE0 5000
+#define DEFAULT_DOWN_RATE0 3000
+#define DEFAULT_UP_RATE4 15000
+#define DEFAULT_DOWN_RATE4 5000
+#define DEFAULT_UP_RATE7 10000
+#define DEFAULT_DOWN_RATE7 10000
+#define DEFAULT_TARGET_LOAD_THRESH 1024
 #define DEFAULT_TARGET_LOAD_SHIFT 4
+#define DEFAULT_HI_FREQ0 1420800
+#define DEFAULT_LO_FREQ0 979200
+#define DEFAULT_HISPEED_FREQ0 1708800
+#define DEFAULT_HI_FREQ4 1766400
+#define DEFAULT_LO_FREQ4 825600
+#define DEFAULT_HISPEED_FREQ4 1862400
+#define DEFAULT_HI_FREQ7 1862400
+#define DEFAULT_LO_FREQ7 1075200
+#define DEFAULT_HISPEED_FREQ7 2265600
 
 struct waltgov_tunables {
 	struct gov_attr_set	attr_set;
@@ -55,8 +64,8 @@ struct waltgov_tunables {
 	bool			pl;
 	bool 				exp_util;
 	int			*target_loads;
-    int			ntarget_loads;
-    spinlock_t		target_loads_lock;
+        int			ntarget_loads;
+        spinlock_t		target_loads_lock;
 	int			boost;
 };
 
@@ -1342,13 +1351,6 @@ static int waltgov_init(struct cpufreq_policy *policy)
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
-		
-#if 0
-	cpufreq_enable_fast_switch(policy);
-
-	if (policy->fast_switch_possible && !policy->fast_switch_enabled)
-		BUG_ON(1);
-#endif
 
 	wg_policy = waltgov_policy_alloc(policy);
 	if (!wg_policy) {
@@ -1370,7 +1372,7 @@ static int waltgov_init(struct cpufreq_policy *policy)
 	tunables->hispeed_load = DEFAULT_HISPEED_LOAD;
 	spin_lock_init(&tunables->target_loads_lock);
 	tunables->target_loads = default_target_loads;
-	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
+	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads) / 2;
 	tunables->target_load_thresh = DEFAULT_TARGET_LOAD_THRESH;
 	tunables->target_load_shift = DEFAULT_TARGET_LOAD_SHIFT;
 
@@ -1380,16 +1382,31 @@ static int waltgov_init(struct cpufreq_policy *policy)
 		tunables->rtg_boost_freq = DEFAULT_CPU0_RTG_BOOST_FREQ;
 		tunables->up_rate_limit_us = DEFAULT_UP_RATE0;
 		tunables->down_rate_limit_us = DEFAULT_DOWN_RATE0;
+		tunables->adaptive_high_freq = DEFAULT_HI_FREQ0;
+		tunables->adaptive_low_freq = DEFAULT_LO_FREQ0;
+		tunables->hispeed_freq = DEFAULT_HISPEED_FREQ0;
+		tunables->pl = true;
+		tunables->exp_util = false;
 		break;
 	case 4:
 		tunables->rtg_boost_freq = DEFAULT_CPU4_RTG_BOOST_FREQ;
 		tunables->up_rate_limit_us = DEFAULT_UP_RATE4;
 		tunables->down_rate_limit_us = DEFAULT_DOWN_RATE4;
+		tunables->adaptive_high_freq = DEFAULT_HI_FREQ4;
+		tunables->adaptive_low_freq = DEFAULT_LO_FREQ4;
+		tunables->hispeed_freq = DEFAULT_HISPEED_FREQ4;
+		tunables->pl = true;
+		tunables->exp_util = false;
 		break;
 	case 7:
 		tunables->rtg_boost_freq = DEFAULT_CPU7_RTG_BOOST_FREQ;
 		tunables->up_rate_limit_us = DEFAULT_UP_RATE7;
 		tunables->down_rate_limit_us = DEFAULT_DOWN_RATE7;
+		tunables->adaptive_high_freq = DEFAULT_HI_FREQ7;
+		tunables->adaptive_low_freq = DEFAULT_LO_FREQ7;
+		tunables->hispeed_freq = DEFAULT_HISPEED_FREQ7;
+		tunables->pl = false;
+		tunables->exp_util = true;
 		break;
 	}
 
