@@ -4061,6 +4061,7 @@ static inline bool task_fits_capacity(struct task_struct *p,
 					int cpu)
 {
 	unsigned int margin;
+	unsigned int tsk_boost = schedtune_task_boost(p);
 	unsigned long uclamp_min = p->uclamp_req[UCLAMP_MIN].value;
 	unsigned long uclamp_max = p->uclamp_req[UCLAMP_MAX].value;
 
@@ -4068,11 +4069,11 @@ static inline bool task_fits_capacity(struct task_struct *p,
 	 * Derive upmigration/downmigrate margin wrt the src/dest CPU.
 	 */
 	if (capacity_orig_of(task_cpu(p)) > capacity_orig_of(cpu))
-		margin = schedtune_task_boost(p) > 0 ?
+		margin = tsk_boost > 0 ?
 			sched_capacity_margin_down_boosted[task_cpu(p)] :
 			sched_capacity_margin_down[task_cpu(p)];
 	else
-		margin = schedtune_task_boost(p) > 0 ?
+		margin = tsk_boost > 0 ?
 			sched_capacity_margin_up_boosted[task_cpu(p)] :
 			sched_capacity_margin_up[task_cpu(p)];
 
