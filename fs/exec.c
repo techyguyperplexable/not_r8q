@@ -1098,13 +1098,6 @@ static int exec_mmap(struct mm_struct *mm)
 		local_irq_enable();
 	tsk->mm->vmacache_seqnum = 0;
 	vmacache_flush(tsk);
-<<<<<<< HEAD
-=======
-#ifdef CONFIG_KDP_CRED
-	if(rkp_cred_enable)
-		uh_call(UH_APP_RKP, RKP_KDP_X43, (u64)current_cred(), (u64)mm->pgd, 0, 0);
-#endif
->>>>>>> d55bcb0456565 (FROMLIST: mm: multi-gen LRU: support page table walks)
 	task_unlock(tsk);
 	lru_gen_use_mm(mm);
 	if (old_mm) {
