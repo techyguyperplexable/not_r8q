@@ -34,7 +34,6 @@
 
 enum {
 	CPUFREQ_HW_LOW_TEMP_LEVEL,
-	CPUFREQ_HW_HIGH_TEMP_LEVEL,
 };
 
 enum {
@@ -61,7 +60,6 @@ struct skipped_freq {
 	u32 prev_index;
 	u32 prev_freq;
 	u32 prev_cc;
-	u32 high_temp_index;
 	u32 low_temp_index;
 	u32 final_index;
 	spinlock_t lock;
@@ -160,20 +158,8 @@ qcom_cpufreq_hw_target_index(struct cpufreq_policy *policy,
 {
 	struct cpufreq_qcom *c = policy->driver_data;
 	unsigned long flags;
-	unsigned int target_index = index;
 
-	if (c->skip_data.skip && index == c->skip_data.high_temp_index) {
-		spin_lock_irqsave(&c->skip_data.lock, flags);
-		writel_relaxed(c->skip_data.final_index,
-				c->reg_bases[REG_PERF_STATE]);
-		target_index = c->skip_data.final_index;
-		spin_unlock_irqrestore(&c->skip_data.lock, flags);
-	} else {
 		writel_relaxed(index, c->reg_bases[REG_PERF_STATE]);
-	}
-
-	sec_smem_clk_osm_add_log_cpufreq(policy->cpu,
-				policy->freq_table[target_index].frequency, policy->kobj.name);
 
 	sec_smem_clk_osm_add_log_cpufreq(policy->cpu,
 				policy->freq_table[index].frequency, policy->kobj.name);
@@ -384,7 +370,6 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 			if (core_count != c->max_cores) {
 				if (core_count == (c->max_cores - 1)) {
 					c->skip_data.skip = true;
-					c->skip_data.high_temp_index = i;
 					c->skip_data.freq = cur_freq;
 					c->skip_data.cc = core_count;
 					c->skip_data.final_index = i + 1;
@@ -434,9 +419,9 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 	if (of_table)
 			devm_kfree(dev, of_table);
 	if (c->skip_data.skip) {
-		pr_err("%s Skip: Index[%u], Frequency[%u], Core Count %u, Final Index %u Actual Index %u Prev_Freq[%u] Prev_Index[%u] Prev_CC[%u]\n",
-				__func__, c->skip_data.high_temp_index,
-				c->skip_data.freq, c->skip_data.cc,
+		pr_err("%s Skip: Frequency[%u], Core Count %u, Final Index %u Actual Index %u Prev_Freq[%u] Prev_Index[%u] Prev_CC[%u]\n",
+				__func__, c->skip_data.freq,
+				c->skip_data.cc,
 				c->skip_data.final_index,
 				c->skip_data.low_temp_index,
 				c->skip_data.prev_freq,
@@ -604,43 +589,8 @@ static int qcom_resources_init(struct platform_device *pdev)
 static int cpufreq_hw_set_cur_state(struct thermal_cooling_device *cdev,
 					unsigned long state)
 {
-	struct cpufreq_cooling_cdev *cpu_cdev = cdev->devdata;
-	struct cpufreq_policy *policy;
-	struct cpufreq_qcom *c;
-	unsigned long flags;
-
-
-	if (cpu_cdev->cpu_id == -1)
-		return -ENODEV;
-
-	if (state > CPUFREQ_HW_HIGH_TEMP_LEVEL)
-		return -EINVAL;
-
-	if (cpu_cdev->cpu_cooling_state == state)
-		return 0;
-
-	policy = cpufreq_cpu_get_raw(cpu_cdev->cpu_id);
-	if (!policy)
-		return 0;
-
-	c = policy->driver_data;
-	cpu_cdev->cpu_cooling_state = state;
-
-	if (state == CPUFREQ_HW_HIGH_TEMP_LEVEL) {
-		spin_lock_irqsave(&c->skip_data.lock, flags);
-		c->skip_data.final_index = c->skip_data.high_temp_index;
-		spin_unlock_irqrestore(&c->skip_data.lock, flags);
-	} else {
-		spin_lock_irqsave(&c->skip_data.lock, flags);
-		c->skip_data.final_index = c->skip_data.low_temp_index;
-		spin_unlock_irqrestore(&c->skip_data.lock, flags);
-	}
-
-	if (policy->cur != c->skip_data.freq)
-		return 0;
-
-	return qcom_cpufreq_hw_target_index(policy,
-					c->skip_data.high_temp_index);
+	pr_warn("the bomb has been planted: thermal hardware control disabled.\n");
+	return 0;
 }
 
 static int cpufreq_hw_get_cur_state(struct thermal_cooling_device *cdev,
@@ -648,8 +598,7 @@ static int cpufreq_hw_get_cur_state(struct thermal_cooling_device *cdev,
 {
 	struct cpufreq_cooling_cdev *cpu_cdev = cdev->devdata;
 
-	*state = (cpu_cdev->cpu_cooling_state) ?
-			CPUFREQ_HW_HIGH_TEMP_LEVEL : CPUFREQ_HW_LOW_TEMP_LEVEL;
+	*state = CPUFREQ_HW_LOW_TEMP_LEVEL;
 
 	return 0;
 }
@@ -657,7 +606,7 @@ static int cpufreq_hw_get_cur_state(struct thermal_cooling_device *cdev,
 static int cpufreq_hw_get_max_state(struct thermal_cooling_device *cdev,
 					unsigned long *state)
 {
-	*state = CPUFREQ_HW_HIGH_TEMP_LEVEL;
+	*state = CPUFREQ_HW_LOW_TEMP_LEVEL;
 	return 0;
 }
 
@@ -710,7 +659,7 @@ static int cpufreq_hw_register_cooling_device(struct platform_device *pdev)
 						cdev_name,
 						PTR_ERR(cpu_cdev->cdev));
 					c->skip_data.final_index =
-						c->skip_data.high_temp_index;
+						c->skip_data.low_temp_index;
 					break;
 				}
 				pr_info("CPUFREQ-HW cooling device %d %s\n",
