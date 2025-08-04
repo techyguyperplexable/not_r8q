@@ -280,19 +280,20 @@ unsigned int sysctl_walt_low_latency_task_threshold; /* disabled by default */
  * The margin used when comparing utilization with CPU capacity:
  * util * margin < capacity * 1024
  *
- * (default: ~20%)
+ * (default: ~25%)
  */
-unsigned int capacity_margin				= 1280;
+unsigned int capacity_margin				= 1344;
 
 unsigned int sched_capacity_margin_up[NR_CPUS] = {
-			1280, 1280, 1280, 1280, 1625, 1625, 1625, 1024
-}; /* ~20% margin for small, ~37% for big, not used for big+  */
+			1344, 1344, 1344, 1344, 1078, 1078, 1078, 1024
+}; /* ~25% margin for small, ~5% for big, 0% for prime */
 unsigned int sched_capacity_margin_down[NR_CPUS] = {
-			1024, 1024, 1024, 1024, 1796, 1796, 1796, 1442
-}; /* Not used for small, ~43% margin for big, ~29% for big+ */
+			1078, 1078, 1078, 1078, 1024, 1024, 1024, 1078
+}; /* ~5% margin for small, 0% for big, ~5% for prime */
+
 unsigned int sched_capacity_margin_up_boosted[NR_CPUS] = {
 	3658, 3658, 3658, 3658, 1078, 1078, 1078, 1024
-}; /* 72% margin for small, 5% for big, 0% for prime */
+}; /* 72% margin for small, ~5% for big, 0% for prime */
 unsigned int sched_capacity_margin_down_boosted[NR_CPUS] = {
 	3658, 3658, 3658, 3658, 3658, 3658, 3658, 3658
 }; /* not used for small cores, 72% margin for big, 72% margin for prime */
