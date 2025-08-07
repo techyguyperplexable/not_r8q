@@ -296,15 +296,6 @@ static int __init rotation_task_init(void)
 
 late_initcall(rotation_task_init);
 
-#ifndef CONFIG_SCHED_WALT
-u64 sched_ktime_clock(void)
-{
-	if (unlikely(sched_ktime_suspended))
-		return ktime_to_ns(ktime_last);
-	return ktime_get_ns();
-}
-#endif
-
 static void sched_resume(void)
 {
 	sched_ktime_suspended = false;

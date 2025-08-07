@@ -137,12 +137,6 @@ int __weak arch_asym_cpu_priority(int cpu)
  */
 unsigned int sysctl_sched_cfs_bandwidth_slice		= 5000UL;
 #endif
-/*
- * The margin used when comparing utilization with CPU capacity.
- *
- * (default: ~20%)
- */
-#define fits_capacity(cap, max)	((cap) * 1280 < (max) * 1024)
 
 #ifdef CONFIG_SCHED_WALT
 /* 1ms default for 20ms window size scaled to 1024 */
@@ -160,6 +154,7 @@ unsigned int sysctl_walt_low_latency_task_threshold; /* disabled by default */
  *
  * (default: ~25%)
  */
+#define fits_capacity(cap, max)	((cap) * 1280 < (max) * 1024)
 unsigned int capacity_margin				= 1344;
 
 unsigned int sched_capacity_margin_up[NR_CPUS] = {
@@ -13175,6 +13170,3 @@ void check_for_migration(struct rq *rq, struct task_struct *p)
 }
 
 #endif /* CONFIG_SCHED_WALT */
-#ifdef CONFIG_SPRD_ROTATION_TASK
-#include "sprd_rotation.c"
-#endif
