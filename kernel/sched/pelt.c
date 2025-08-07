@@ -30,36 +30,16 @@
 
 #include <trace/events/sched.h>
 
-int pelt_load_avg_period = PELT32_LOAD_AVG_PERIOD;
-int pelt_load_avg_max = PELT32_LOAD_AVG_MAX;
-const u32 *pelt_runnable_avg_yN_inv = pelt32_runnable_avg_yN_inv;
+int pelt_load_avg_period = LOAD_AVG_PERIOD;
+int pelt_load_avg_max = LOAD_AVG_MAX;
+const u32 *pelt_runnable_avg_yN_inv = runnable_avg_yN_inv;
 
 static int __init set_pelt(char *str)
 {
-	int rc, num;
-
-	rc = kstrtoint(str, 0, &num);
-	if (rc) {
-		pr_err("%s: kstrtoint failed. rc=%d\n", __func__, rc);
-		return 0;
-	}
-
-	switch (num) {
-	case PELT8_LOAD_AVG_PERIOD:
-		pelt_load_avg_period = PELT8_LOAD_AVG_PERIOD;
-		pelt_load_avg_max = PELT8_LOAD_AVG_MAX;
-		pelt_runnable_avg_yN_inv = pelt8_runnable_avg_yN_inv;
-		pr_info("PELT half life is set to %dms\n", num);
-		break;
-	case PELT32_LOAD_AVG_PERIOD:
-		pelt_load_avg_period = PELT32_LOAD_AVG_PERIOD;
-		pelt_load_avg_max = PELT32_LOAD_AVG_MAX;
-		pelt_runnable_avg_yN_inv = pelt32_runnable_avg_yN_inv;
-		pr_info("PELT half life is set to %dms\n", num);
-		break;
-	default:
-		pr_err("Default PELT half life is 32ms\n");
-	}
+	pelt_load_avg_period = LOAD_AVG_PERIOD;
+	pelt_load_avg_max = LOAD_AVG_MAX;
+	pelt_runnable_avg_yN_inv = runnable_avg_yN_inv;
+	pr_info("PELT half life is set to 8ms\n");
 
 	return 0;
 }

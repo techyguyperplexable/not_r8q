@@ -26,9 +26,15 @@
 
 #define KHZ 1000
 
-#define DEFAULT_TARGET_LOAD (0)
+#ifdef CONFIG_SCHED_WALT
+#define DEFAULT_TARGET_LOAD 0
 #define TARGET_LOAD 90
 #define DEFAULT_HISPEED_LOAD 90
+#else
+#define DEFAULT_TARGET_LOAD 0
+#define TARGET_LOAD 82
+#define DEFAULT_HISPEED_LOAD 80
+#endif
 
 #define NL_RATIO 70
 
@@ -36,6 +42,7 @@
 #define DEFAULT_CPU4_RTG_BOOST_FREQ 1286400
 #define DEFAULT_CPU7_RTG_BOOST_FREQ 1305600
 
+#ifdef CONFIG_SCHED_WALT
 #define DEFAULT_UP_RATE0 5000
 #define DEFAULT_UP_RATE4 16000
 #define DEFAULT_UP_RATE7 16000
@@ -43,6 +50,16 @@
 #define DEFAULT_DOWN_RATE0 3000
 #define DEFAULT_DOWN_RATE4 4000
 #define DEFAULT_DOWN_RATE7 4000
+
+#else
+#define DEFAULT_UP_RATE0 0
+#define DEFAULT_UP_RATE4 0
+#define DEFAULT_UP_RATE7 0
+
+#define DEFAULT_DOWN_RATE0 0
+#define DEFAULT_DOWN_RATE4 0
+#define DEFAULT_DOWN_RATE7 0
+#endif
 
 #define DEFAULT_TARGET_LOAD_THRESH 1024
 #define DEFAULT_TARGET_LOAD_SHIFT 4
@@ -1557,7 +1574,11 @@ static void waltgov_limits(struct cpufreq_policy *policy)
 }
 
 static struct cpufreq_governor walt_gov = {
+#ifdef CONFIG_SCHED_WALT
 	.name			= "walt",
+#else
+	.name			= "pelt",
+#endif
 	.owner			= THIS_MODULE,
 	.dynamic_switching	= true,
 	.init			= waltgov_init,
