@@ -63,12 +63,6 @@ walt_dec_cfs_rq_stats(struct cfs_rq *cfs_rq, struct task_struct *p) {}
 
 #endif
 
-#ifndef CONFIG_SCHED_WALT
-unsigned long walt_cpu_util(int cpu, unsigned long util_cfs,
-                            unsigned long max, enum schedutil_type type,
-                            struct task_struct *p);
-#endif
-
 #ifdef CONFIG_SMP
 static inline unsigned long boosted_task_util(struct task_struct *task);
 #endif
@@ -7620,6 +7614,7 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 {
 	unsigned int max_util, cpu_util, cpu_cap;
 	unsigned long sum_util, energy = 0;
+	unsigned long min, max;
 	int cpu;
 
 	for (; pd; pd = pd->next) {
@@ -7648,7 +7643,6 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			sum_util += cpu_util;
 #else
 			unsigned int util_cfs;
-			struct task_struct *tsk;
 
 			util_cfs = cpu_util_next(cpu, p, dst_cpu);
 
@@ -7659,11 +7653,11 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			 * consumption at the (eventually clamped) cpu_capacity.
 			 */
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_WALT 
-                        sum_util += walt_cpu_util(cpu, util_cfs, cpu_cap,
-						       ENERGY_UTIL, NULL);
+                        sum_util += walt_cpu_util(cpu, util_cfs,
+						       NULL, NULL);
 #else
-			sum_util += schedutil_cpu_util(cpu, util_cfs, cpu_cap,
-						       ENERGY_UTIL, NULL);
+			sum_util += schedutil_cpu_util(cpu, util_cfs,
+						       NULL, NULL);
 #endif
 			/*
 			 * Performance domain frequency: utilization clamping
@@ -7672,14 +7666,13 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			 * NOTE: in case RT tasks are running, by default the
 			 * FREQUENCY_UTIL's utilization can be max OPP.
 			 */
-			tsk = cpu == dst_cpu ? p : NULL;
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_WALT 
-			cpu_util = walt_cpu_util(cpu, util_cfs, cpu_cap,
-						      FREQUENCY_UTIL, tsk);
-#else
-			cpu_util = schedutil_cpu_util(cpu, util_cfs, cpu_cap,
-						      FREQUENCY_UTIL, tsk);
-#endif
+			cpu_util = schedutil_cpu_util(cpu, util_cfs, &min, &max);
+			/* Task's uclamp can modify min and max value */
+			if (uclamp_is_used()) {
+				min = max(min, uclamp_eff_value(p, UCLAMP_MIN));
+				max = max(max, uclamp_eff_value(p, UCLAMP_MAX));
+			}
+			cpu_util = sugov_effective_cpu_perf(cpu, cpu_util, min, max);
 #endif
 			max_util = max(max_util, cpu_util);
 		}
