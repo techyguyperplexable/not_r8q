@@ -390,13 +390,6 @@ static void sugov_get_util(struct sugov_cpu *sg_cpu, unsigned long boost)
 	sg_cpu->util = sugov_effective_cpu_perf(sg_cpu->cpu, util, min, max);
 }
 
-unsigned long sched_cpu_util(int cpu)
-{
-	unsigned long max = arch_scale_cpu_capacity(cpu);
-
-	return schedutil_cpu_util(cpu, cpu_util_cfs(cpu_rq(cpu)), NULL, &max);
-}
-
 /**
  * sugov_iowait_reset() - Reset the IO boost status of a CPU.
  * @sg_cpu: the sugov data for the CPU to boost

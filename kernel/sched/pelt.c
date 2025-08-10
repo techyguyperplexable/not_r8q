@@ -140,8 +140,8 @@ accumulate_sum(u64 delta, struct sched_avg *sa,
 			delta %= 1024;
 		else {
 			sa->load_sum = decay_load(sa->load_sum, periods);
-			sa->runnable_sum =
-				decay_load(sa->runnable_sum, periods);
+			sa->runnable_load_sum =
+				decay_load(sa->runnable_load_sum, periods);
 			sa->util_sum = decay_load((u64)(sa->util_sum), periods);
 
 			/*
@@ -173,8 +173,8 @@ accumulate_sum(u64 delta, struct sched_avg *sa,
 	}
 
 	if (runnable) {
-		sa->runnable_sum += runnable * contrib << SCHED_CAPACITY_SHIFT;
-		sa->runnable_sum = min_t(u64, sa->runnable_sum, divider * runnable);
+		sa->runnable_load_sum += runnable * contrib << SCHED_CAPACITY_SHIFT;
+		sa->runnable_load_sum = min_t(u64, sa->runnable_load_sum, divider * runnable);
 	}
 
 	if (running) {
@@ -287,10 +287,10 @@ ___update_load_avg(struct sched_avg *sa, unsigned long load, unsigned long runna
  *     se_weight()   = tg->weight * grq->load_avg / tg->load_avg
  *     se_runnable() = se_weight(se) * grq->runnable_load_avg / grq->load_avg
  *
- *   load_sum := runnable_sum
+ *   load_sum := runnable_load_sum
  *   load_avg = se_weight(se) * runnable_avg
  *
- *   runnable_load_sum := runnable_sum
+ *   runnable_load_sum := runnable_load_sum
  *   runnable_load_avg = se_runnable(se) * runnable_avg
  *
  * XXX collapse load_sum and runnable_load_sum
