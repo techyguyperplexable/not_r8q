@@ -88,18 +88,16 @@ unsigned int sysctl_sched_cstate_aware = 1;
  *
  * (CFS  default SCHED_TUNABLESCALING_LOG  = *(1+ilog(ncpus))
  */
-enum sched_tunable_scaling sysctl_sched_tunable_scaling = SCHED_TUNABLESCALING_LOG;
+enum sched_tunable_scaling sysctl_sched_tunable_scaling = SCHED_TUNABLESCALING_NONE;
 
 /*
  * Minimal preemption granularity for CPU-bound tasks:
  *
- * (default: 0.75 msec * (1 + ilog(ncpus)), units: nanoseconds)
- * (not default: 3 msec * (1 + ilog(ncpus)), units: nanoseconds)
  */
-unsigned int sysctl_sched_base_slice			= 3000000ULL;
-unsigned int normalized_sysctl_sched_base_slice		= 3000000ULL;
+unsigned int sysctl_sched_base_slice			= 2800000ULL;
+static unsigned int normalized_sysctl_sched_base_slice	= 2800000ULL;
 
-const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
+const_debug unsigned int sysctl_sched_migration_cost	= 0UL;
 DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
 
 #ifdef CONFIG_SMP
@@ -110,6 +108,22 @@ int __weak arch_asym_cpu_priority(int cpu)
 {
 	return -cpu;
 }
+
+/*
+ * The margin used when comparing CPU capacities.
+ * is 'cap1' noticeably greater than 'cap2'
+ *
+ * (default: ~5%)
+ */
+#define capacity_greater(cap1, cap2) ((cap1) * 1024 > (cap2) * 1078)
+
+/*
+ * The margin used when comparing utilization with CPU capacity.
+ *
+ * (default: ~20%)
+ */
+#define fits_capacity(cap, max)	((cap) * 1280 < (max) * 1024)
+
 #endif
 
 #ifdef CONFIG_CFS_BANDWIDTH
@@ -136,22 +150,13 @@ unsigned int sysctl_walt_rtg_cfs_boost_prio = 99; /* disabled by default */
 unsigned int sysctl_walt_low_latency_task_threshold; /* disabled by default */
 #endif
 
-/*
- * The margin used when comparing utilization with CPU capacity:
- * util * margin < capacity * 1024
- *
- * (default: ~25%)
- */
-#define fits_capacity(cap, max)	((cap) * 1280 < (max) * 1024)
 unsigned int capacity_margin				= 1344;
 
-unsigned int sched_capacity_margin_up[NR_CPUS] = {
-			1344, 1344, 1344, 1344, 1078, 1078, 1078, 1024
-}; /* ~25% margin for small, ~5% for big, 0% for prime */
-unsigned int sched_capacity_margin_down[NR_CPUS] = {
-			1078, 1078, 1078, 1078, 1024, 1024, 1024, 1078
-}; /* ~5% margin for small, 0% for big, ~5% for prime */
-
+unsigned int sched_capacity_margin_up[CPU_NR] = {
+			[0 ... CPU_NR-1] = 1078}; /* ~5% margin */
+unsigned int sched_capacity_margin_down[CPU_NR] = {
+			[0 ... CPU_NR-1] = 1205}; /* ~15% margin */
+			
 unsigned int sched_capacity_margin_up_boosted[NR_CPUS] = {
 	3658, 3658, 3658, 3658, 1078, 1078, 1078, 1024
 }; /* 72% margin for small, ~5% for big, 0% for prime */
