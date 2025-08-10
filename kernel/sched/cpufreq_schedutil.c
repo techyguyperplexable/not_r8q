@@ -150,21 +150,6 @@ static bool sugov_update_next_freq(struct sugov_policy *sg_policy, u64 time,
 	return true;
 }
 
-static void sugov_fast_switch(struct sugov_policy *sg_policy, u64 time,
-			      unsigned int next_freq)
-{
-	struct cpufreq_policy *policy = sg_policy->policy;
-
-	if (!sugov_update_next_freq(sg_policy, time, next_freq))
-		return;
-
-	next_freq = cpufreq_driver_fast_switch(policy, next_freq);
-	if (!next_freq)
-		return;
-
-	policy->cur = next_freq;
-}
-
 static void sugov_deferred_update(struct sugov_policy *sg_policy, u64 time,
 				  unsigned int next_freq)
 {
@@ -540,13 +525,9 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	 * concurrently on two different CPUs for the same target and it is not
 	 * necessary to acquire the lock in the fast switch case.
 	 */
-	if (sg_policy->policy->fast_switch_enabled) {
-		sugov_fast_switch(sg_policy, time, next_f);
-	} else {
-		raw_spin_lock(&sg_policy->update_lock);
-		sugov_deferred_update(sg_policy, time, next_f);
-		raw_spin_unlock(&sg_policy->update_lock);
-	}
+	raw_spin_lock(&sg_policy->update_lock);
+	sugov_deferred_update(sg_policy, time, next_f);
+	raw_spin_unlock(&sg_policy->update_lock);
 }
 
 static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu, u64 time)
@@ -588,10 +569,6 @@ sugov_update_shared(struct update_util_data *hook, u64 time, unsigned int flags)
 	if (sugov_should_update_freq(sg_policy, time) &&
 	    !(flags & SCHED_CPUFREQ_CONTINUE)) {
 		next_f = sugov_next_freq_shared(sg_cpu, time);
-
-		if (sg_policy->policy->fast_switch_enabled)
-			sugov_fast_switch(sg_policy, time, next_f);
-		else
 			sugov_deferred_update(sg_policy, time, next_f);
 	}
 
@@ -764,10 +741,6 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 	struct cpufreq_policy *policy = sg_policy->policy;
 	int ret;
 
-	/* kthread only required for slow path */
-	if (policy->fast_switch_enabled)
-		return 0;
-
 	kthread_init_work(&sg_policy->work, sugov_work);
 	kthread_init_worker(&sg_policy->worker);
 	thread = kthread_create(kthread_worker_fn, &sg_policy->worker,
@@ -797,10 +770,6 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 
 static void sugov_kthread_stop(struct sugov_policy *sg_policy)
 {
-	/* kthread only required for slow path */
-	if (sg_policy->policy->fast_switch_enabled)
-		return;
-
 	kthread_flush_worker(&sg_policy->worker);
 	kthread_stop(sg_policy->thread);
 	mutex_destroy(&sg_policy->work_lock);
@@ -834,13 +803,13 @@ static int sugov_init(struct cpufreq_policy *policy)
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
-
+		
 	cpufreq_enable_fast_switch(policy);
-
+	
 	sg_policy = sugov_policy_alloc(policy);
 	if (!sg_policy) {
 		ret = -ENOMEM;
-		goto disable_fast_switch;
+		goto disable_gov;
 	}
 
 	ret = sugov_kthread_create(sg_policy);
@@ -896,8 +865,7 @@ stop_kthread:
 free_sg_policy:
 	sugov_policy_free(sg_policy);
 
-disable_fast_switch:
-	cpufreq_disable_fast_switch(policy);
+disable_gov:
 
 	pr_err("initialization failed (error %d)\n", ret);
 	return ret;
@@ -924,7 +892,6 @@ static void sugov_exit(struct cpufreq_policy *policy)
 
 	sugov_kthread_stop(sg_policy);
 	sugov_policy_free(sg_policy);
-	cpufreq_disable_fast_switch(policy);
 }
 
 static int sugov_start(struct cpufreq_policy *policy)
@@ -972,10 +939,8 @@ static void sugov_stop(struct cpufreq_policy *policy)
 
 	synchronize_sched();
 
-	if (!policy->fast_switch_enabled) {
-		irq_work_sync(&sg_policy->irq_work);
-		kthread_cancel_work_sync(&sg_policy->work);
-	}
+	irq_work_sync(&sg_policy->irq_work);
+	kthread_cancel_work_sync(&sg_policy->work);
 }
 
 static void sugov_limits(struct cpufreq_policy *policy)
@@ -984,24 +949,9 @@ static void sugov_limits(struct cpufreq_policy *policy)
 	unsigned long flags, now;
 	unsigned int freq;
 
-	if (!policy->fast_switch_enabled) {
-		mutex_lock(&sg_policy->work_lock);
-		cpufreq_policy_apply_limits(policy);
-		mutex_unlock(&sg_policy->work_lock);
-	} else {
-		raw_spin_lock_irqsave(&sg_policy->update_lock, flags);
-		freq = policy->cur;
-		now = ktime_get_ns();
-
-		/*
-		 * cpufreq_driver_resolve_freq() has a clamp, so we do not need
-		 * to do any sort of additional validation here.
-		 */
-		freq = cpufreq_driver_resolve_freq(policy, freq);
-		sg_policy->cached_raw_freq = freq;
-		sugov_fast_switch(sg_policy, now, freq);
-		raw_spin_unlock_irqrestore(&sg_policy->update_lock, flags);
-	}
+	mutex_lock(&sg_policy->work_lock);
+	cpufreq_policy_apply_limits(policy);
+	mutex_unlock(&sg_policy->work_lock);
 
 	sg_policy->limits_changed = true;
 }
