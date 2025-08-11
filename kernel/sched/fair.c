@@ -7630,13 +7630,8 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			 * is already enough to scale the EM reported power
 			 * consumption at the (eventually clamped) cpu_capacity.
 			 */
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_WALT 
-                        sum_util += walt_cpu_util(cpu, util_cfs,
-						       NULL, NULL);
-#else
-			sum_util += schedutil_cpu_util(cpu, util_cfs,
-						       NULL, NULL);
-#endif
+			sum_util += schedutil_cpu_util(cpu, util_cfs, NULL, NULL);
+
 			/*
 			 * Performance domain frequency: utilization clamping
 			 * must be considered since it affects the selection
@@ -7648,8 +7643,10 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			/* Task's uclamp can modify min and max value */
 			if (uclamp_is_used()) {
 				min = max(min, uclamp_eff_value(p, UCLAMP_MIN));
+
 				max = max(max, uclamp_eff_value(p, UCLAMP_MAX));
 			}
+
 			cpu_util = sugov_effective_cpu_perf(cpu, cpu_util, min, max);
 #endif
 			max_util = max(max_util, cpu_util);
