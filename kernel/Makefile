@@ -128,15 +128,11 @@ obj-$(CONFIG_RSEQ) += rseq.o
 $(obj)/configs.o: $(obj)/config_data.h
 
 targets += config_data.gz
-ifdef CONFIG_SAMSUNG_NFC
-$(obj)/config_data.gz: arch/arm64/configs/vendor/r8q_eur_open_defconfig FORCE
-else
-$(obj)/config_data.gz: arch/arm64/configs/vendor/r8q_eur_openx_defconfig FORCE
-endif
+$(obj)/config_data.gz := arch/arm64/configs/vendor/r8q_eur_open_defconfig FORCE
 
       filechk_ikconfiggz = (echo "static const char kernel_config_data[] __used = MAGIC_START"; cat $< | scripts/bin2c; echo "MAGIC_END;")
 targets += config_data.h
-$(obj)/config_data.h: $(obj)/config_data.gz FORCE
+$(obj)/config_data.h: arch/arm64/configs/vendor/r8q_eur_openx_defconfig FORCE
 	$(call filechk,ikconfiggz)
 
 $(obj)/kheaders.o: $(obj)/kheaders_data.tar.xz
