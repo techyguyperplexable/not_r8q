@@ -20,7 +20,7 @@ KERNEL_MAKE_ENV="CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 KERNEL_BUILD_ENV="ARCH=arm64 \
                   CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
                   LLVM=1 \
-                  LLVM_IAS=1
+                  LLVM_IAS=1"
 
 OUT_DIR="$KDIR/out"
 DTBO_OUT="$OUT_DIR/arch/arm64/boot"
