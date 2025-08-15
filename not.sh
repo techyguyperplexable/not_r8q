@@ -1,37 +1,40 @@
 #!/bin/bash
-LLVM_PATH="/home/skye/bomb/clang/bin/"
-SD_PATH="/home/skye/bomb/clangsd/bin/"
+
+KDIR="$(readlink -f .)"
+
+# Clang (ZyCromer)
+CL_PATH="$HOME/toolchain/clangzyc/bin"
 
 KERNEL_NAME="not_kernel-CYHTM-"
 
 HOST_BUILD_ENV="ARCH=arm64 \
-                CC=${SD_PATH}clang \
-                CROSS_COMPILE=${SD_PATH}aarch64-linux-gnu- \
+                CC=${CL_PATH}/clang \
+                CROSS_COMPILE=${CL_PATH}/aarch64-linux-gnu- \
                 LLVM=1 \
                 LLVM_IAS=1 \
-                PATH=$LLVM_PATH:$SD_PATH:$PATH"
+                PATH=$CL_PATH:$PATH"
 
-KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
+KERNEL_MAKE_ENV="CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 KERNEL_BUILD_ENV="ARCH=arm64 \
-                  CROSS_COMPILE=${SD_PATH}aarch64-linux-gnu- \
+                  CROSS_COMPILE=${CL_PATH}/aarch64-linux-gnu- \
                   LLVM=1 \
                   LLVM_IAS=1 \
-                  PATH=$LLVM_PATH:$SD_PATH:$PATH"
+                  PATH=$CL_PATH:$PATH"
 
-DTBO_OUT="/home/skye/bomb/out/arch/arm64/boot"
-DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
-IMAGE="/home/skye/bomb/out/arch/arm64/boot/Image"
-OUT_DIR="/home/skye/bomb/out"
-ANYKERNEL_DIR="/home/skye/bomb/AnyKernel3/r8q"
+OUT_DIR="$KDIR/out"
+DTBO_OUT="$OUT_DIR/arch/arm64/boot"
+DTB_OUT="$OUT_DIR/arch/arm64/boot/dts/vendor/qcom"
+IMAGE="$OUT_DIR/arch/arm64/boot/Image"
+ANYKERNEL_DIR="$KDIR/AnyKernel3/r8q"
 
 echo "*****************************************"
 echo "*****************************************"
 
-rm -rf "$OUT_DIR/arch/arm64/boot/Image"
-rm -rf "$ANYKERNEL_DIR/dtb"
-rm -rf "$OUT_DIR/dtbo.img"
-rm -rf .version .local
+rm -f "$OUT_DIR/arch/arm64/boot/Image"
+rm -f "$ANYKERNEL_DIR/dtb"
+rm -f "$OUT_DIR/dtbo.img"
+rm -f .version .local
 make O="$OUT_DIR" $HOST_BUILD_ENV not_defconfig
 
 echo "*****************************************"
@@ -40,7 +43,7 @@ echo "*****************************************"
 # Build Device Tree Blob//Overlay
 
 make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
-     CC="${SD_PATH}clang --target=aarch64-linux-gnu" dtbo.img
+     CC="${CL_PATH}/clang --target=aarch64-linux-gnu" dtbo.img
 
 cp "$DTBO_OUT/dtbo.img" "$ANYKERNEL_DIR/dtbo.img"
 cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
@@ -48,7 +51,7 @@ cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
 # Build Kernel Image
 
 make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
-     CC="${SD_PATH}clang --target=aarch64-linux-gnu" Image
+     CC="${CL_PATH}/clang --target=aarch64-linux-gnu" Image
 
 echo "**Build outputs**"
 ls "$OUT_DIR/arch/arm64/boot"
@@ -64,4 +67,3 @@ rm -f *.zip
 zip -r9 "${KERNEL_NAME}$(date +"%Y%m%d")+r8q.zip" .
 
 echo "The bomb has been planted."
-
