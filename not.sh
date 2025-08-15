@@ -2,25 +2,25 @@
 
 KDIR="$(readlink -f .)"
 
-# Clang (ZyCromer)
-CL_PATH="$HOME/toolchain/clangzyc/bin"
+# Clang (SD Clang)
+CL_PATH="$HOME/toolchain/clangsd/bin"
+GCC64_PATH="$HOME/toolchain/gcc64/bin"
+export PATH="$GCC64_PATH:$CL_PATH:$PATH"
 
 KERNEL_NAME="not_kernel-CYHTM-"
 
 HOST_BUILD_ENV="ARCH=arm64 \
                 CC=${CL_PATH}/clang \
-                CROSS_COMPILE=${CL_PATH}/aarch64-linux-gnu- \
+                CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
                 LLVM=1 \
-                LLVM_IAS=1 \
-                PATH=$CL_PATH:$PATH"
+                LLVM_IAS=1"
 
 KERNEL_MAKE_ENV="CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 KERNEL_BUILD_ENV="ARCH=arm64 \
-                  CROSS_COMPILE=${CL_PATH}/aarch64-linux-gnu- \
+                  CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
                   LLVM=1 \
-                  LLVM_IAS=1 \
-                  PATH=$CL_PATH:$PATH"
+                  LLVM_IAS=1
 
 OUT_DIR="$KDIR/out"
 DTBO_OUT="$OUT_DIR/arch/arm64/boot"
@@ -43,7 +43,7 @@ echo "*****************************************"
 # Build Device Tree Blob//Overlay
 
 make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
-     CC="${CL_PATH}/clang --target=aarch64-linux-gnu" dtbo.img
+     CC="${CL_PATH}/clang" dtbo.img
 
 cp "$DTBO_OUT/dtbo.img" "$ANYKERNEL_DIR/dtbo.img"
 cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
@@ -51,7 +51,7 @@ cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
 # Build Kernel Image
 
 make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
-     CC="${CL_PATH}/clang --target=aarch64-linux-gnu" Image
+     CC="${CL_PATH}/clang" Image
 
 echo "**Build outputs**"
 ls "$OUT_DIR/arch/arm64/boot"
