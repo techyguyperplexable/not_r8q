@@ -2,17 +2,16 @@
 
 KDIR="$(readlink -f .)"
 
-# Clang (SD Clang)
-CL_PATH="$HOME/toolchain/clangsd/compiler/bin"
-GCC64_PATH="$HOME/toolchain/gcc64/bin"
-export PATH="$GCC64_PATH:$CL_PATH:$PATH"
+# Clang (ZyCromer)
+CL_PATH="$HOME/toolchain/clangzyc/bin"
+export PATH="$CL_PATH:$PATH"
 
 KERNEL_NAME="not_kernel-CYHTM-"
 
 HOST_BUILD_ENV="ARCH=arm64 \
                 CC=${CL_PATH}/clang \
                 HOSTCC=gcc \
-                CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
+                CROSS_COMPILE=$GCC64_PATH/aarch64-linux-gnu- \
                 LLVM=1 \
                 LLVM_IAS=1"
 
@@ -20,7 +19,7 @@ KERNEL_MAKE_ENV="CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 KERNEL_BUILD_ENV="ARCH=arm64 \
                   HOSTCC=gcc \
-                  CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
+                  CROSS_COMPILE=$GCC64_PATH/aarch64-linux-gnu- \
                   LLVM=1 \
                   LLVM_IAS=1"
 
@@ -37,7 +36,8 @@ rm -f "$OUT_DIR/arch/arm64/boot/Image"
 rm -f "$ANYKERNEL_DIR/dtb"
 rm -f "$OUT_DIR/dtbo.img"
 rm -f .version .local
-make O="$OUT_DIR" $HOST_BUILD_ENV not_defconfig
+rm -f log.txt
+make O="$OUT_DIR" $HOST_BUILD_ENV not_defconfig 2>&1 | tee log.txt
 
 echo "*****************************************"
 echo "*****************************************"
@@ -45,7 +45,7 @@ echo "*****************************************"
 # Build Device Tree Blob//Overlay
 
 make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
-     CC="${CL_PATH}/clang" dtbo.img
+     CC="${CL_PATH}/clang" dtbo.img 2>&1 | tee -a log.txt
 
 cp "$DTBO_OUT/dtbo.img" "$ANYKERNEL_DIR/dtbo.img"
 cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
@@ -53,7 +53,7 @@ cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
 # Build Kernel Image
 
 make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
-     CC="${CL_PATH}/clang" Image
+     CC="${CL_PATH}/clang" Image 2>&1 | tee -a log.txt
 
 echo "**Build outputs**"
 ls "$OUT_DIR/arch/arm64/boot"
