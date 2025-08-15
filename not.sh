@@ -19,6 +19,7 @@ HOST_BUILD_ENV="ARCH=arm64 \
 KERNEL_MAKE_ENV="CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 KERNEL_BUILD_ENV="ARCH=arm64 \
+                  HOSTCC=gcc \
                   CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
                   LLVM=1 \
                   LLVM_IAS=1"
