@@ -3,7 +3,7 @@
 KDIR="$(readlink -f .)"
 
 # Clang (SD Clang)
-CL_PATH="$HOME/toolchain/clangsd/bin"
+CL_PATH="$HOME/toolchain/clangsd/compiler/bin"
 GCC64_PATH="$HOME/toolchain/gcc64/bin"
 export PATH="$GCC64_PATH:$CL_PATH:$PATH"
 
