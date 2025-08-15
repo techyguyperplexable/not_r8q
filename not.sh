@@ -11,6 +11,7 @@ KERNEL_NAME="not_kernel-CYHTM-"
 
 HOST_BUILD_ENV="ARCH=arm64 \
                 CC=${CL_PATH}/clang \
+                HOSTCC=gcc \
                 CROSS_COMPILE=$GCC64_PATH/aarch64-buildroot-linux-gnu- \
                 LLVM=1 \
                 LLVM_IAS=1"
