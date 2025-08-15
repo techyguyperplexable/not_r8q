@@ -383,7 +383,7 @@ KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
 CPP		= $(CC) -E
 ifneq ($(LLVM),)
 CC		= clang
-LD		= lld
+LD		= ld.lld
 AR		= llvm-ar
 NM		= llvm-nm
 OBJCOPY		= llvm-objcopy
