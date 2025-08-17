@@ -34,19 +34,12 @@ set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 ## AnyKernel boot install
 dump_boot;
 
-# Flash DTBO
-
-flash_dtbo() {
-  if [ -f $ZIPFILE/dtbo.img ]; then
-    dd if=$ZIPFILE/dtbo.img of=/dev/block/by-name/dtbo
-  fi
-}
 # begin kernel/dtb/dtbo changes
 oneui=$(file_getprop /system/build.prop ro.build.version.oneui);
 gsi=$(file_getprop /system/build.prop ro.product.system.device);
 if [ -n "$oneui" ]; then
    ui_print " "
-   ui_print " • OneUI ROM detected! • " # OneUI 7.0/6.1.1/6.1/6.0/5.1/5.0/4.1/4.0/3.1 bomb
+   ui_print " • OneUI ROM detected! • " # OneUI 7.X/6.X/5.X/4.X/3.X bomb
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=0";
@@ -56,6 +49,9 @@ elif [ $gsi == generic ]; then
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=0";
+   ui_print " "
+   ui_print " • Patching SELinux... • "
+   patch_cmdline "androidboot.selinux" "androidboot.selinux=permissive";
 else
    ui_print " "
    ui_print " • AOSP ROM detected! • " # Android 16/15/14/13 veri gud

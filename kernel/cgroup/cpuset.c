@@ -138,6 +138,26 @@ struct cpuset {
 
 	/* for custom sched domain */
 	int relax_domain_level;
+
+	/* number of CPUs in subparts_cpus */
+	int nr_subparts_cpus;
+
+	/* partition root state */
+	int partition_root_state;
+
+	/*
+	 * Default hierarchy only:
+	 * use_parent_ecpus - set if using parent's effective_cpus
+	 * child_ecpus_count - # of children with use_parent_ecpus set
+	 */
+	int use_parent_ecpus;
+	int child_ecpus_count;
+
+	/*
+	 * number of SCHED_DEADLINE tasks attached to this cpuset, so that we
+	 * know when to rebuild associated root domain bandwidth information.
+	 */
+	int nr_deadline_tasks;
 };
 
 struct cs_target {
@@ -173,6 +193,19 @@ static inline bool task_has_mempolicy(struct task_struct *task)
 }
 #endif
 
+void inc_dl_tasks_cs(struct task_struct *p)
+{
+	struct cpuset *cs = task_cs(p);
+
+	cs->nr_deadline_tasks++;
+}
+
+void dec_dl_tasks_cs(struct task_struct *p)
+{
+	struct cpuset *cs = task_cs(p);
+
+	cs->nr_deadline_tasks--;
+}
 
 /* bits in struct cpuset flags field */
 typedef enum {
@@ -297,6 +330,17 @@ static struct cpuset top_cpuset = {
  */
 
 static DEFINE_MUTEX(cpuset_mutex);
+
+void cpuset_lock(void)
+{
+	mutex_lock(&cpuset_mutex);
+}
+
+void cpuset_unlock(void)
+{
+	mutex_unlock(&cpuset_mutex);
+}
+
 static DEFINE_SPINLOCK(callback_lock);
 
 static struct workqueue_struct *cpuset_migrate_mm_wq;
@@ -395,7 +439,8 @@ static void guarantee_online_mems(struct cpuset *cs, nodemask_t *pmask)
 /*
  * update task's spread flag if cpuset's page/slab spread flag is set
  *
- * Call with callback_lock or cpuset_mutex held.
+ * Call with callback_lock or cpuset_mutex held. The check can be skipped
+ * if on default hierarchy.
  */
 static void cpuset_update_task_spread_flag(struct cpuset *cs,
 					struct task_struct *tsk)
@@ -829,10 +874,13 @@ done:
 	return ndoms;
 }
 
-static void update_tasks_root_domain(struct cpuset *cs)
+static void dl_update_tasks_root_domain(struct cpuset *cs)
 {
 	struct css_task_iter it;
 	struct task_struct *task;
+
+	if (cs->nr_deadline_tasks == 0)
+		return;
 
 	css_task_iter_start(&cs->css, 0, &it);
 
@@ -842,7 +890,7 @@ static void update_tasks_root_domain(struct cpuset *cs)
 	css_task_iter_end(&it);
 }
 
-static void rebuild_root_domains(void)
+static void dl_rebuild_rd_accounting(void)
 {
 	struct cpuset *cs = NULL;
 	struct cgroup_subsys_state *pos_css;
@@ -872,7 +920,7 @@ static void rebuild_root_domains(void)
 
 		rcu_read_unlock();
 
-		update_tasks_root_domain(cs);
+		dl_update_tasks_root_domain(cs);
 
 		rcu_read_lock();
 		css_put(&cs->css);
@@ -886,7 +934,7 @@ partition_and_rebuild_sched_domains(int ndoms_new, cpumask_var_t doms_new[],
 {
 	mutex_lock(&sched_domains_mutex);
 	partition_sched_domains_locked(ndoms_new, doms_new, dattr_new);
-	rebuild_root_domains();
+	dl_rebuild_rd_accounting();
 	mutex_unlock(&sched_domains_mutex);
 }
 
@@ -1575,6 +1623,11 @@ static int cpuset_can_attach(struct cgroup_taskset *tset)
 		ret = security_task_setscheduler(task);
 		if (ret)
 			goto out_unlock;
+
+		if (dl_task(task)) {
+			cs->nr_deadline_tasks++;
+			cpuset_attach_old_cs->nr_deadline_tasks--;
+		}
 	}
 
 	/*
@@ -1623,7 +1676,7 @@ static void cpuset_attach(struct cgroup_taskset *tset)
 	cgroup_taskset_first(tset, &css);
 	cs = css_cs(css);
 
-	lockdep_assert_cpus_held();     /* see cgroup_attach_lock() */
+	lockdep_assert_cpus_held();	/* see cgroup_attach_lock() */
 	mutex_lock(&cpuset_mutex);
 
 	/* prepare for attach */
@@ -1853,12 +1906,12 @@ static ssize_t cpuset_write_resmask_wrapper(struct kernfs_open_file *of,
 					 char *buf, size_t nbytes, loff_t off)
 {
 	static struct cs_target cs_targets[] = {
-		{ "audio-app",		"4,7" },
-		{ "background",		"0-6" },
+		{ "audio-app",		"1-3,6" },
+		{ "background",		"0-2" },
 		{ "camera-daemon",	"0-7" },
-		{ "foreground",		"0-3" },
-		{ "restricted",		"4-7" },
-		{ "system-background",	"4-7" },
+		{ "foreground",		"0-2" },
+		{ "restricted",		"0-3" },
+		{ "system-background",	"0-2" },
 		{ "top-app",		"0-7" },
 	};
 	struct cpuset *cs = css_cs(of_css(of));
@@ -1961,7 +2014,6 @@ static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
 	/* Unrechable but makes gcc happy */
 	return 0;
 }
-
 
 /*
  * for the common functions, 'private' gives the type of file
